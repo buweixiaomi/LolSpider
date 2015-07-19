@@ -1,0 +1,107 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace LolSpider
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Unity.DbConn dbconn = new Unity.DbConn(".", "lolspider", "sa", "Xx~!@#");
+            string server = "电信六";
+            dbconn.Open();
+            //Models.Player mine = new Models.Player() { fighting = 3720, searchdeep = 0, lastplaytime = DateTime.Now, level = 30, parentplayer = "", playername = "不唯小米", servername = server };
+
+            //DbVisiter.LolUser.AddUser(dbconn, mine);
+
+            Actions.UseAction ua = new Actions.UseAction(dbconn, server, "不唯小米", 50, 1);
+
+
+
+            var users = new List<Models.Player>();// ua.Do();
+            int currlevel = 1;
+            int currpage = 1;
+            int currcount = 0;
+            int currlevelallcount = 0;
+
+
+
+            int tcount = 10;
+            object lockobj = new object();
+            int curr_do_count = 0;
+            int curr_do_com_count = 0;
+            for (int i = 0; i < tcount; i++)
+            {
+                System.Threading.Thread tr = new System.Threading.Thread(() =>
+                {
+                    try
+                    {
+                        using (Unity.DbConn dbconn1 = new Unity.DbConn(".", "lolspider", "sa", "Xx~!@#"))
+                        {
+                            dbconn1.Open();
+                            while (true)
+                            {
+                                Models.Player u = null;
+                                lock (users)
+                                {
+                                    u = users.FirstOrDefault();
+                                    if (u != null)
+                                    {
+                                        users.Remove(u);
+                                        currcount++;
+                                    }
+                                }
+
+
+                                if (u == null)
+                                {
+                                    lock (lockobj)
+                                    {
+                                        curr_do_com_count++;
+                                        if (curr_do_com_count == tcount)
+                                        {
+                                            if (currlevelallcount <= currcount)//加级
+                                            {
+                                                currlevel++;
+
+                                            }
+                                            else//下一页
+                                            {
+                                                currpage++;
+                                                curr_do_com_count = 0;
+                                                users = DbVisiter.LolUser.GetListByPage(dbconn1, server, currlevel, currpage, tcount, out currlevelallcount);
+                                            }
+                                        }
+                                    }
+                                }
+
+
+                                lock(lockobj)
+                                {
+                                    curr_do_count++;
+                                }
+                                var newact = new Actions.UseAction(dbconn1, server, u.playername, 50, u.searchdeep + 1);
+                                newact.Do();
+
+                                lock (lockobj)
+                                {
+                                    curr_do_com_count++;
+                                }
+
+
+
+                            }
+                        }
+                    }
+                    catch (Exception ex) { }
+                });
+                tr.IsBackground = true;
+                tr.Start();
+            }
+            Console.Read();
+            Console.WriteLine();
+        }
+    }
+}
