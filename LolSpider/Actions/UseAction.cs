@@ -11,10 +11,9 @@ namespace LolSpider.Actions
         string _playername = "";
         int _maxprematch = 0;
         int _searchdeep = 1;
-        int currcount = 0;
         int currpno = 1;
         Unity.DbConn dbconn = null;
-        public UseAction(Unity.DbConn dbc,string servername, string playername, int maxprematch,int searchdeep)
+        public UseAction(Unity.DbConn dbc, string servername, string playername, int maxprematch, int searchdeep)
         {
             dbconn = dbc;
             _servername = servername;
@@ -26,18 +25,17 @@ namespace LolSpider.Actions
         public List<Models.Player> Do()
         {
             List<string> str_users = new List<string>();
-            while (currcount <= _maxprematch)
+            while (currpno <= _maxprematch)
             {
                 var x = GetPageMatchs(currpno);
                 if (x == null || x.Count == 0)
                     break;
                 foreach (var a in x)
                 {
-                    if (currcount >= _maxprematch)
+                    if (currpno > _maxprematch)
                         break;
                     var y = GetMatchUsers(a.matchid);
                     str_users.AddRange(y);
-                    currcount++;
                 }
                 currpno++;
             }
@@ -166,13 +164,12 @@ namespace LolSpider.Actions
         {
             string url = string.Format(LolConfig.URL_MATCH_DETAILS, matchid, _servername, _playername);
             string rhtml = Unity.HttpWebRequest.Get(url);
-            var parser = Winista.Text.HtmlParser.Parser.CreateParser(rhtml, "utf8");
 
             Winista.Text.HtmlParser.Filters.HasAttributeFilter tnf_a = new Winista.Text.HtmlParser.Filters.HasAttributeFilter("id", "zj-table--A");
             Winista.Text.HtmlParser.Filters.HasAttributeFilter tnf_b = new Winista.Text.HtmlParser.Filters.HasAttributeFilter("id", "zj-table--B");
 
-            var tb_a = parser.ExtractAllNodesThatMatch(tnf_a);
-            var tb_b = parser.ExtractAllNodesThatMatch(tnf_b);
+            var tb_a =  Winista.Text.HtmlParser.Parser.CreateParser(rhtml, "utf8").ExtractAllNodesThatMatch(tnf_a);
+            var tb_b = Winista.Text.HtmlParser.Parser.CreateParser(rhtml, "utf8").ExtractAllNodesThatMatch(tnf_b);
             List<string> us = new List<string>();
             us.AddRange(GetUsersFromTb(tb_a));
             us.AddRange(GetUsersFromTb(tb_b));
@@ -225,7 +222,7 @@ namespace LolSpider.Actions
                 Winista.Text.HtmlParser.ITag firsttd = null;
                 for (int k = 0; k < trs[i].Children.Count; k++)
                 {
-                    var td_t = trs[i].Children[i] as Winista.Text.HtmlParser.ITag;
+                    var td_t = trs[i].Children[k] as Winista.Text.HtmlParser.ITag;
                     if (td_t != null && td_t.TagName == "TD")
                     {
                         firsttd = td_t;
